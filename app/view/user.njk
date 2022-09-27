@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>○○銀行</title>
+  
+  <link rel="stylesheet" href="../public/css/main.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
+</head>
+
+<body>
+  <div class="system_name">
+      <h2>○○銀行</h2>
+    </div>
+    
+    <div class="user_page">
+      <div id="container1">
+
+        <div class="show">  
+          <h3>User：{{ username }}</h3>
+          <h5>可用餘額：{{ money }}</h5>
+          <a href="/logout" class="btn btn-warning">登出</a>
+        </div><!-- login end-->
+      </div><!-- container1 end-->
+    </div><!-- login_page end-->
+    
+</body>
+
+</html>
