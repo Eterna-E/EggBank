@@ -11,15 +11,23 @@
 
 <body>
   <div class="system_name">
-      <h2>○○銀行</h2>
+      {# <h2>○○銀行</h2> #}
+      <a href="/" class="btn btn-link" style="text-decoration:none;color:black"><h1>○○銀行</h1></a>
     </div>
     
     <div class="user_page">
       <div id="container1">
-
         <div class="show">  
-          <h3>User：{{ username }}</h3>
+          <h3>使用者：{{ username }}</h3>
+          <br>
           <h5>可用餘額：{{ money }}</h5>
+          <a href="/trans" class="btn btn-success">交易紀錄</a>
+          <br>
+          <br>
+          <a href="/deposit" class="btn btn-outline-success">存款</a>
+          <a href="/record" class="btn btn-outline-primary">提款</a>
+          <br>
+          <br>
           <a href="/logout" class="btn btn-warning">登出</a>
         </div><!-- login end-->
       </div><!-- container1 end-->

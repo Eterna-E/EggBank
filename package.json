@@ -10,7 +10,9 @@
     "egg": "^2",
     "egg-redis": "^2.4.0",
     "egg-scripts": "^2",
-    "egg-view-nunjucks": "^2.3.0"
+    "egg-sequelize": "^6.0.0",
+    "egg-view-nunjucks": "^2.3.0",
+    "mysql2": "^2.3.3"
   },
   "devDependencies": {
     "autod": "^3",
@@ -19,7 +21,8 @@
     "egg-ci": "^2",
     "egg-mock": "^4",
     "eslint": "^8",
-    "eslint-config-egg": "^12"
+    "eslint-config-egg": "^12",
+    "sequelize-cli": "^6.4.1"
   },
   "engines": {
     "node": ">=16.0.0"

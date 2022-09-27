@@ -17,7 +17,20 @@ module.exports = appInfo => {
         '.njk': 'nunjucks',
       },
     },
+    sequelize : {
+      dialect: 'mysql',
+      host: 'localhost',
+      port: 3306,
+      database: 'EggBank',
+      username: 'root', // 数据库用户名
+      password: '12345678', // 数据库密码
+      timezone: '+08:00', // 设置时区
 
+      dialectOptions: {
+        dateStrings: true,
+        typeCast: true
+      }
+    },
     redis : {
       client: {
         port: 6379,          // Redis port

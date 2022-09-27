@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>○○銀行</title>
+  <script src="../public/js/login.js" defer></script>
+  <link rel="stylesheet" href="../public/css/main.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
+</head>
+
+<body>
+  <div class="system_name">
+      <h2>○○銀行</h2>
+    </div>
+    
+    <div class="savemoney_page">
+      <div id="container1">
+
+        <div class="savemoney">  
+          
+          <h3>存款</h3>
+          <form action="/trans" method="post">
+            <br>
+            <input type="text" id="savemoney" name="savemoney" placeholder="輸入金額" required>
+            <div class="tab"></div>
+            <input type="submit" value="存入" class="submit" >
+          </form>  
+        </div>
+        <a href="/" class="btn btn-success">返回</a>
+      </div>
+    </div>
+    
+</body>
+
+</html>
