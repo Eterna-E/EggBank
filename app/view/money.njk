@@ -19,13 +19,16 @@
 
         <div class="savemoney">  
           
-          <h3>存款</h3>
+          <h3>{{ operateName }}</h3>
+          <h5>可用餘額：{{ money }}</h5>
           <form action="/trans" method="post">
             <br>
-            <input type="text" id="savemoney" name="savemoney" placeholder="輸入金額" required>
+            <input type="hidden" name="operate" value="{{ operate }}" /> 
+            <input type="text" id="amount" name="amount" placeholder="輸入{{ operateName }}金額大於零" required="required" pattern="([1-9])+(?:-?\d){0,}">
             <div class="tab"></div>
-            <input type="submit" value="存入" class="submit" >
+            <input type="submit" value="{{ btnName }}" class="submit" >
           </form>  
+          {{ typeNumber }}
         </div>
         <a href="/" class="btn btn-success">返回</a>
       </div>

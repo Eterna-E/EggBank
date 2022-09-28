@@ -12,8 +12,11 @@ module.exports = (app) => {
     date: {
       allowNull: false,
       type: DATE, 
-      defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+      defaultValue: app.Sequelize.literal('CURRENT_TIMESTAMP')
     },
+  }, {
+    tableName: 'transactions',
+    timestamps: false
   });
 
   return Transactions;

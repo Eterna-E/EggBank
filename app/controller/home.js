@@ -7,7 +7,7 @@ class HomeController extends Controller {
     const { ctx } = this;
 
     if (ctx.session.username){
-      ctx.redirect('/userpage');
+      ctx.redirect('/users');
 
       return;
     }

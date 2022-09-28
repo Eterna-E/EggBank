@@ -11,7 +11,7 @@
 
 <body>
   <div class="system_name">
-      <h2>○○銀行</h2>
+      <a href="/" class="btn btn-link" style="text-decoration:none;color:black"><h1>○○銀行</h1></a>
     </div>
     
     <div class="login_page">
@@ -32,6 +32,7 @@
           <h5 onclick="show_hide()">註冊帳號</h5>
           {{ userNotFound }}
           {{ passWordIncorrect }}
+          {{ userExist }}
         </div><!-- login end-->
       </div><!-- container1 end-->
     </div><!-- login_page end-->
@@ -43,7 +44,7 @@
           
           <h3>註冊 Sign Up</h3>
 
-          <form action="/signup" method="post">
+          <form action="/users" method="post">
             <div class="tab"></div>
             <input type="text" id="username2" name="username" placeholder="帳號" required>
             <div class="tab"></div>
