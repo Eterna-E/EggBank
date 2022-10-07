@@ -13,4 +13,5 @@ module.exports = app => {
 
   router.resources('users', '/users', controller.user);
   router.resources('trans', '/trans', controller.transaction);
+  router.resources('trans', '/api/trans', controller.apiTransaction);
 };

@@ -1,46 +1,64 @@
 'use strict';
 
+const sd = require('silly-datetime');
+
 const Controller = require('egg').Controller;
+
+function toInt(str) {
+  if (typeof str === 'number') return str;
+  if (!str) return str;
+  return parseInt(str, 10) || 0;
+}
 
 class UserController extends Controller {
 
-  async index() {
+  async index() { // 使用者首頁
     const { ctx, app } = this;
+    // const username = ctx.session.username;
+    const username = 'root';
+    const redis = app.redis;
+    const userBalanceRedis = username + 'Balance';
+    let money;
 
-    if (!ctx.session.username){
-      await ctx.render('home.njk', { userNotFound: "請登入" });
+    // if (!username){
+    //   await ctx.render('home.njk', { userNotFound: "請登入" });
 
-      return;
+    //   return;
+    // }
+    let userBalance = await redis.get(userBalanceRedis);
+    if (userBalance){
+      money = userBalance;
     }
-
-    const user = await ctx.model.User.findOne({ where: { name: ctx.session.username } });
-    
-    if (!user) ctx.redirect('/');
-    // console.log(user);
-    const username = user.name;
-    const money = user.money;
-    // if (!username) return;
-    // if (!money) return;
+    else{
+      userBalance = await ctx.model.Transaction.findOne({ 
+        where: { user: username },
+        order: [[ 'id', 'DESC' ]],
+      });
+      money = userBalance.balance;
+      await redis.set(userBalanceRedis, money);
+      // await redis.expire(userBalanceRedis, 3);
+    }
 
     await ctx.render('user.njk', { username: username, money: money });
   }
 
-  // async signUp() { //Create
-  async create() {
+  async create() { // 註冊
     const { ctx, app } = this;
     const { request: { body } } = ctx;
     const username = body.username;
     const password = body.password;
 
-    let user = await ctx.model.User.findOne({ where: { name: username } });
+    let user = await this.ctx.service.cache.get(username);
+    if(!user){
+      user = await ctx.model.User.findOne({ where: { name: username } });
+      await ctx.service.cache.set(username, user, 3600);
+    }
 
     if(!user){
-        await ctx.model.User.create({ 
+      await ctx.model.User.create({ 
         name: username,
         password: password,
-        money: 100,
       });
-  
       await ctx.model.Transaction.create({
         user: username,
         deposit: 100,
@@ -56,11 +74,18 @@ class UserController extends Controller {
     }
   }
 
-  async login() {
-    const { ctx, app } = this;
+  async login() { // 登入
+    const { ctx } = this;
     const { request: { body } } = ctx;
 
-    const user = await ctx.model.User.findOne({ where: { name: body.username } });
+    // const user = await ctx.model.User.findOne({ where: { name: body.username } });
+
+    let user = await this.ctx.service.cache.get(body.username);
+    if(!user){
+      user = await ctx.model.User.findOne({ where: { name: body.username } });
+      await ctx.service.cache.set(body.username, user, 3600);
+    }
+
     if(!user) {
       await ctx.render('home.njk', { userNotFound: "使用者不存在" });
       return;
@@ -84,27 +109,6 @@ class UserController extends Controller {
 
     ctx.redirect('/');
   }
-
-  // async userPage() {
-  //   const { ctx, app } = this;
-
-  //   if (!ctx.session.username){
-  //     await ctx.render('home.njk', { userNotFound: "請登入" });
-
-  //     return;
-  //   }
-
-  //   const user = await ctx.model.User.findOne({ where: { name: ctx.session.username } });
-    
-  //   if (!user) ctx.redirect('/');
-  //   // console.log(user);
-  //   const username = user.name;
-  //   const money = user.money;
-  //   // if (!username) return;
-  //   // if (!money) return;
-
-  //   await ctx.render('user.njk', { username: username, money: money });
-  // }
 }
 
 module.exports = UserController;

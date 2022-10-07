@@ -9,69 +9,84 @@ function toInt(str) {
 }
 
 class TransactionController extends Controller {
-  async index() {
-    const { ctx } = this;
-    const username = ctx.session.username;
-    const transactions = await ctx.model.Transaction.findAll({
-      where: {
-        user: username
-      },
-      order: [[ 'date', 'DESC' ]]
-    });
-    // console.log(transactions);
+  async index() { // 交易紀錄
+    const { ctx, app } = this;
+    // const username = ctx.session.username;
+    const username = 'root';
+    const redis = app.redis;
+    const userTransactionsAll = username + ':TransactionsAll';
+    const transactionName = username + ':Transactions:'
+    
+    let transactionIdList = await redis.lrange(userTransactionsAll, 0, 99);
+    //   1~100 0 1+0*100 100+0*100
+    // 101~200 1 1+1*100 100+1*100
+    // 0 12345
+    // 1 23456
+    let transactionsList = await ctx.service.transaction.getList(transactionName, transactionIdList)
 
-    await ctx.render('transaction.njk', { transactions: transactions });
-    // ctx.body = transactions;
+    await ctx.render('transaction.njk', { transactions: transactionsList, page: 1 });
+  }
+
+  async show(){
+    const { ctx, app } = this;
+    // const username = ctx.session.username;
+    let page = toInt(ctx.params.id);
+    if (!page) {
+      page = 1;
+    }
+    const username = 'root';
+    const redis = app.redis;
+    const userTransactionsAll = username + ':TransactionsAll';
+    const transactionName = username + ':Transactions:'
+    const offset =  (page - 1) * 100;
+    let transactionIdList = await redis.lrange(userTransactionsAll, 0 + offset, 99 + offset);
+    //   1~100 0 1+0*100 100+0*100
+    // 101~200 1 1+1*100 100+1*100
+    // 0 12345
+    // 1 23456
+    let transactionsList = await ctx.service.transaction.getList(transactionName, transactionIdList)
+
+    await ctx.render('transaction.njk', { transactions: transactionsList, page: page });
+    // ctx.body = {
+    //   name: `hello ${ctx.params.id}`,
+    // };
   }
 
   async create() {
-    const { ctx } = this;
+    const { ctx, app } = this;
     const { request: { body } } = ctx;
-    const username = ctx.session.username;
-    const operate = body.operate;
+    const username = 'root';
+    // const username = ctx.session.username
 
-    if (isNaN(body.amount)){
-      await ctx.render('money.njk', { typeNumber: '請輸入數字' });
-      ctx.redirect('/deposit');
-
-      return;
-    }
-    const amount = toInt(body.amount);
-    // console.log(amount);
-    const user = await ctx.model.User.findOne({ where: { name: username } });
-    const money = toInt(user.money);
-    // console.log(user);
-    if (operate === 'withdraw' && amount > money){
-      await ctx.render('money.njk', {
-        operateName: "提款",
-        money: money,
-        operate: operate,
-        btnName: "提領",
-        typeNumber: '提款金額不得大於餘額'
-      });
-
-      return;
-    }
-    let balance = (operate === 'deposit') ? money + amount : money - amount;
-    await user.update({ money: balance });
-    await ctx.model.Transaction.create({
-      user: username,
-      deposit: (operate === 'deposit') ? amount : 0,
-      withdraw: (operate === 'withdraw') ? amount : 0,
-      balance: balance,
-    });
+    const balance = await ctx.service.transaction.balance(username);
+    if (! balance) return;
+    await ctx.service.transaction.insertOne(username, balance);
 
     ctx.redirect('/users');
   }
 
   async operate() {
-    const { ctx } = this;
+    const { ctx, app } = this;
     const { request: { body } } = ctx;
     const username = ctx.session.username;
     const operate = body.operate;
-    // console.log(operate);
-    const user = await ctx.model.User.findOne({ where: { name: username } });
-    const money = toInt(user.money);
+    const redis = app.redis;
+    const userBalanceRedis = username + 'Balance';
+    let money;
+
+    let userBalance = await redis.get(userBalanceRedis);
+    if (userBalance){
+      money = userBalance;
+    }
+    else{
+      userBalance = await ctx.model.Transaction.findOne({ 
+        where: { user: username },
+        order: [[ 'id', 'DESC' ]],
+      });
+      money = userBalance.balance;
+      await redis.set(userBalanceRedis, money);
+      // await redis.expire(userBalanceRedis, 3);
+    }
 
     await ctx.render('money.njk', {
       operateName: (operate === 'deposit') ? '存款' : "提款",

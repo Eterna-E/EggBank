@@ -12,7 +12,8 @@
     "egg-scripts": "^2",
     "egg-sequelize": "^6.0.0",
     "egg-view-nunjucks": "^2.3.0",
-    "mysql2": "^2.3.3"
+    "mysql2": "^2.3.3",
+    "silly-datetime": "^0.1.2"
   },
   "devDependencies": {
     "autod": "^3",

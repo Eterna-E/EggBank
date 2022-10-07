@@ -39,6 +39,11 @@ module.exports = appInfo => {
         db: 0,
       },
     },
+    security: {
+      csrf: {
+        enable: false, // 关闭框架默认得csrf插件
+      },
+    },
   };
 
   // use for cookie sign key, should change to your own and keep security
