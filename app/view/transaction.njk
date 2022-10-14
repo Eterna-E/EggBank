@@ -15,8 +15,6 @@
       <a href="/users" class="btn btn-link" style="text-decoration:none;color:#df5334"><h1>○○銀行</h1></a>
     </div>
   </div>
-  
-
   <div class="comments container">
     <nav aria-label="Page navigation example">
       <ul class="pagination">
@@ -29,11 +27,6 @@
         {% for i in range(0, 5) -%}
           <li class="page-item {% if i == 0 %}active{% endif %}"><a class="page-link" href="/trans/{{ page + i }}">{{ page + i }}</a></li>
         {%- endfor %}
-        {# <li class="page-item active"><a class="page-link" href="/trans/{{page}}">1</a></li> #}
-        {# <li class="page-item"><a class="page-link" href="#">2</a></li> #}
-        {# <li class="page-item"><a class="page-link" href="#">3</a></li> #}
-        {# <li class="page-item"><a class="page-link" href="#">4</a></li> #}
-        {# <li class="page-item"><a class="page-link" href="#">5</a></li> #}
         <li class="page-item">
           <a class="page-link" href="/trans/{{ page + 5 }}" aria-label="Next">
             <span aria-hidden="true">&raquo;</span>
@@ -67,7 +60,6 @@
           </tbody>
         </table>
     </ul>
-    {# <a href="/" class="btn btn-success">返回</a> #}
     <nav aria-label="Page navigation example">
       <ul class="pagination">
         <a href="/" class="btn btn-success">返回</a>
@@ -79,11 +71,6 @@
         {% for i in range(0, 5) -%}
           <li class="page-item {% if i == 0 %}active{% endif %}"><a class="page-link" href="/trans/{{ page + i }}">{{ page + i }}</a></li>
         {%- endfor %}
-        {# <li class="page-item active"><a class="page-link" href="/trans/{{page}}">1</a></li> #}
-        {# <li class="page-item"><a class="page-link" href="#">2</a></li> #}
-        {# <li class="page-item"><a class="page-link" href="#">3</a></li> #}
-        {# <li class="page-item"><a class="page-link" href="#">4</a></li> #}
-        {# <li class="page-item"><a class="page-link" href="#">5</a></li> #}
         <li class="page-item">
           <a class="page-link" href="/trans/{{ page + 5 }}" aria-label="Next">
             <span aria-hidden="true">&raquo;</span>

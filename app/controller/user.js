@@ -14,8 +14,8 @@ class UserController extends Controller {
 
   async index() { // 使用者首頁
     const { ctx, app } = this;
-    // const username = ctx.session.username;
-    const username = 'root';
+    const username = ctx.session.username;
+    // const username = 'root';
     const redis = app.redis;
     const userBalanceRedis = username + 'Balance';
     let money;

@@ -10,19 +10,11 @@ function toInt(str) {
 
 class TransactionController extends Controller {
   async index() { // 交易紀錄
-    const { ctx, app } = this;
+    const { ctx } = this;
     // const username = ctx.session.username;
     const username = 'root';
-    const redis = app.redis;
-    const userTransactionsAll = username + ':TransactionsAll';
-    const transactionName = username + ':Transactions:'
     
-    let transactionIdList = await redis.lrange(userTransactionsAll, 0, 99);
-    //   1~100 0 1+0*100 100+0*100
-    // 101~200 1 1+1*100 100+1*100
-    // 0 12345
-    // 1 23456
-    let transactionsList = await ctx.service.transaction.getList(transactionName, transactionIdList)
+    const transactionsList = await ctx.service.transaction.searchTransaction(username);
 
     await ctx.render('transaction.njk', { transactions: transactionsList, page: 1 });
   }
@@ -37,19 +29,14 @@ class TransactionController extends Controller {
     const username = 'root';
     const redis = app.redis;
     const userTransactionsAll = username + ':TransactionsAll';
-    const transactionName = username + ':Transactions:'
+    const transactionName = 'Transactions:'
     const offset =  (page - 1) * 100;
     let transactionIdList = await redis.lrange(userTransactionsAll, 0 + offset, 99 + offset);
-    //   1~100 0 1+0*100 100+0*100
-    // 101~200 1 1+1*100 100+1*100
-    // 0 12345
-    // 1 23456
-    let transactionsList = await ctx.service.transaction.getList(transactionName, transactionIdList)
+    let transactionsList = await ctx.service.transaction.getList(transactionIdList)
 
+    // console.log(transactionIdList)
+    // console.log(transactionsList)
     await ctx.render('transaction.njk', { transactions: transactionsList, page: page });
-    // ctx.body = {
-    //   name: `hello ${ctx.params.id}`,
-    // };
   }
 
   async create() {
@@ -58,9 +45,12 @@ class TransactionController extends Controller {
     const username = 'root';
     // const username = ctx.session.username
 
-    const balance = await ctx.service.transaction.balance(username);
-    if (! balance) return;
-    await ctx.service.transaction.insertOne(username, balance);
+    // const balance = await ctx.service.transaction.balance(username);
+    // if (! balance) return;
+    // await ctx.service.transaction.insertOne(username, balance);
+
+    // 方式3:
+    const balance = await ctx.service.transaction.createTransactionNoLock(username);
 
     ctx.redirect('/users');
   }
@@ -85,7 +75,6 @@ class TransactionController extends Controller {
       });
       money = userBalance.balance;
       await redis.set(userBalanceRedis, money);
-      // await redis.expire(userBalanceRedis, 3);
     }
 
     await ctx.render('money.njk', {

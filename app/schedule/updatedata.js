@@ -19,22 +19,16 @@ class UpdateData extends Subscription {
     // 更新 Redis 資料到 Mysql
     const { ctx, app } = this;
     const redis = app.redis;
-    let username = "root"
-    const userTransactionsTemp = username + ':TransactionsTemp';
-    const transactionName = username + ':Transactions:'; // 交易紀錄的 hash key 前綴
-    let tempListLen = await redis.llen(userTransactionsTemp);
-
-    // console.log(tempListLen);
+    const transactionsIdTempList = "Transactions:Temp";
+    let tempListLen = await redis.llen(transactionsIdTempList);
 
     if (tempListLen) {
       console.log("Has data");
-      const transactionsTempIdList = await redis.lrange(userTransactionsTemp, 0, tempListLen);
-      // console.log(transactionsTempIdList);
-      const transactionsList = await ctx.service.transaction.getList(transactionName, transactionsTempIdList);
-      // console.log(transactionsList);
+      const idList = await redis.lpop(transactionsIdTempList, tempListLen);
+      // console.log(idList)
+      const transactionsList = await ctx.service.transaction.getList(idList);
+      // console.log(transactionsList)
       await ctx.model.Transaction.bulkCreate(transactionsList);
-      await redis.ltrim(userTransactionsTemp, tempListLen + 1, -1);
-      // ctx.body = transactionsList;
     }
   }
 }
