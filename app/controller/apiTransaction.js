@@ -23,15 +23,6 @@ class ApiTransactionController extends Controller {
       balance: balance
     };
   }
-
-  async new() {
-    const { ctx } = this;
-    const newestTransaction = await ctx.model.Transaction.findOne({ 
-      attributes: ['id'], 
-      order: [[ 'id', 'DESC' ]] 
-    });
-    console.log(newestTransaction.id);
-  }
 }
 
 module.exports = ApiTransactionController;
