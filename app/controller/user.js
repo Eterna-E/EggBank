@@ -73,7 +73,7 @@ class UserController extends Controller {
       user = await ctx.model.User.findOne({ where: { name: body.username } });
       await ctx.service.cache.set(body.username, user, 3600);
     }
-    if(!user) {
+    if (!user) {
       await ctx.render('home.njk', { userNotFound: "使用者不存在" });
 
       return;
@@ -81,11 +81,10 @@ class UserController extends Controller {
     const username = user.name;
     const password = user.password;
 
-    if(username === body.username && password === body.password){
+    if (username === body.username && password === body.password) {
       ctx.session.username = username;
       ctx.redirect('/users');
-    }
-    else{
+    } else {
       await ctx.render('home.njk', { passWordIncorrect: "密碼錯誤" });
     }
   }

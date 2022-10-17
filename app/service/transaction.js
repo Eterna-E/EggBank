@@ -32,9 +32,9 @@ class TransactionService extends Service {
     if (! transactionList) { // transactionList 不存在
       await this.dataSyncMysqlToRedis(username); // Mysql to Redis 資料同步
     }
-    const result = await this.insertTransactionByLua(username, userTransactions); //寫入 1 筆交易紀錄到 redis 
+    const balance = await this.insertTransactionByLua(username, userTransactions); //寫入 1 筆交易紀錄到 redis 
 
-    return result;
+    return balance;
   }
 
   async insertTransactionByLua(username, userTransactions) { //寫入 1 筆交易紀錄到 redis 
@@ -44,9 +44,23 @@ class TransactionService extends Service {
     const operate = body.operate;
     const newestId = "newest:TransactionId";
     const userBalance = username + ":Balance";
-
+    const money = toInt(await redis.get(userBalance));
     let amount = toInt(body.amount);
-    if (operate === 'withdraw'){ amount = amount * -1; }
+    if (operate === 'withdraw' && amount > money) {
+      await ctx.render('money.njk', {
+        operateName: (operate === 'deposit') ? '存款' : "提款",
+        money: money,
+        operate: operate,
+        btnName: (operate === 'deposit') ? '存入' : "提領",
+        amountError: "提領金額不可大於可用餘額"
+      });
+
+      return;
+    }
+
+    if (operate === 'withdraw') { 
+      amount = amount * -1; 
+    }
     const redisLuaScript = fs.readFileSync('app/service/transaction.lua');
     redis.defineCommand("createTransaction", { numberOfKeys: 2, lua: redisLuaScript });
     const result = await redis.createTransaction(newestId, userBalance, amount);
@@ -66,14 +80,20 @@ class TransactionService extends Service {
   }
 
   async dataSyncMysqlToRedis(username){
+    const { ctx } = this;
     const redis = this.app.redis;
     const expireTime = 3600;
-    const newestId = "newest:TransactionId";
     const userBalance = username + ":Balance";
     const userTransactions = username + ':Transactions';
+    const newest = await ctx.model.Transaction.findOne({ 
+      attributes: ['id'], 
+      order: [[ 'id', 'DESC' ]] 
+    });
+    const newestId = newest.id;
+    await redis.setex("newest:TransactionId", expireTime, newestId);
 
     const transactionList = await this.getAllTransactions(username, 100000); // 查詢 mysql 10萬筆交易資料
-    await redis.setex(newestId, expireTime, transactionList[0].id);
+    
     await redis.setex(userBalance, expireTime, transactionList[0].balance);
     for (let i in transactionList){ // 同步資料到 redis
       await redis.rpush(userTransactions, JSON.stringify(transactionList[i]));

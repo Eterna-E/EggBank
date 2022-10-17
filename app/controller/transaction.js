@@ -23,9 +23,10 @@ class TransactionController extends Controller {
     let page = toInt(ctx.params.id);
     if (!page) { page = 1; }
     const offset =  (page - 1) * 100;
+    let transactionsLen = await redis.llen(userTransactions);
     let transactionsList = await redis.lrange(userTransactions, 0 + offset, 99 + offset);
-    if (! transactionsList.length) { // transactionList 不存在
-      await this.dataSyncMysqlToRedis(username); // Mysql to Redis 資料同步
+    if (!transactionsLen) { // transactionList 不存在
+      await ctx.service.transaction.dataSyncMysqlToRedis(username); // Mysql to Redis 資料同步
       transactionsList = await redis.lrange(userTransactions, 0 + offset, 99 + offset);
     }
     for (let i in transactionsList){
@@ -37,9 +38,14 @@ class TransactionController extends Controller {
 
   async create() {
     const { ctx } = this;
-    const username = ctx.session.username
+    const { request: { body } } = ctx;
+    const username = ctx.session.username;
+    const operate = body.operate;
 
-    await ctx.service.transaction.createTransactionNoLock(username);
+    const balance = await ctx.service.transaction.createTransactionNoLock(username);
+    if (!balance && balance !== 0) {
+      return;
+    }
 
     ctx.redirect('/users');
   }
@@ -50,7 +56,7 @@ class TransactionController extends Controller {
     const username = ctx.session.username;
     const operate = body.operate;
     const redis = app.redis;
-    const userBalanceRedis = username + 'Balance';
+    const userBalanceRedis = username + ':Balance';
     let money;
 
     let userBalance = await redis.get(userBalanceRedis);
