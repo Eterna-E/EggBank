@@ -2,17 +2,12 @@
 
 const Controller = require('egg').Controller;
 
-function toInt(str) {
-  if (typeof str === 'number') return str;
-  if (!str) return str;
-  return parseInt(str, 10) || 0;
-}
+const { toInt } = require('../utils/utils')
 
 class TransactionController extends Controller {
   async index() { // 交易紀錄
     const { ctx } = this;
-    // const username = ctx.session.username;
-    const username = 'root';
+    const username = ctx.session.username;
     
     const transactionsList = await ctx.service.transaction.searchTransaction(username);
 
@@ -21,36 +16,30 @@ class TransactionController extends Controller {
 
   async show(){
     const { ctx, app } = this;
-    // const username = ctx.session.username;
-    let page = toInt(ctx.params.id);
-    if (!page) {
-      page = 1;
-    }
-    const username = 'root';
+    const username = ctx.session.username;
     const redis = app.redis;
-    const userTransactionsAll = username + ':TransactionsAll';
-    const transactionName = 'Transactions:'
+    const userTransactions = username + ':Transactions';
+    let transactions = [];
+    let page = toInt(ctx.params.id);
+    if (!page) { page = 1; }
     const offset =  (page - 1) * 100;
-    let transactionIdList = await redis.lrange(userTransactionsAll, 0 + offset, 99 + offset);
-    let transactionsList = await ctx.service.transaction.getList(transactionIdList)
-
-    // console.log(transactionIdList)
-    // console.log(transactionsList)
-    await ctx.render('transaction.njk', { transactions: transactionsList, page: page });
+    let transactionsList = await redis.lrange(userTransactions, 0 + offset, 99 + offset);
+    if (! transactionsList.length) { // transactionList 不存在
+      await this.dataSyncMysqlToRedis(username); // Mysql to Redis 資料同步
+      transactionsList = await redis.lrange(userTransactions, 0 + offset, 99 + offset);
+    }
+    for (let i in transactionsList){
+      await transactions.push(JSON.parse(transactionsList[i]));
+    }
+    
+    await ctx.render('transaction.njk', { transactions: transactions, page: page });
   }
 
   async create() {
-    const { ctx, app } = this;
-    const { request: { body } } = ctx;
-    const username = 'root';
-    // const username = ctx.session.username
+    const { ctx } = this;
+    const username = ctx.session.username
 
-    // const balance = await ctx.service.transaction.balance(username);
-    // if (! balance) return;
-    // await ctx.service.transaction.insertOne(username, balance);
-
-    // 方式3:
-    const balance = await ctx.service.transaction.createTransactionNoLock(username);
+    await ctx.service.transaction.createTransactionNoLock(username);
 
     ctx.redirect('/users');
   }

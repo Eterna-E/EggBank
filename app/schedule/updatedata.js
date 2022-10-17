@@ -7,27 +7,23 @@ class UpdateData extends Subscription {
   static get schedule() {
     return {
       interval: '1s', // 1 分钟间隔
-      type: 'all', // 指定所有的 worker 都需要执行
+      type: 'worker', // 指定所有的 worker 都需要执行
     };
   }
 
   // subscribe 是真正定时任务执行时被运行的函数
-  async subscribe() {
-    // console.log(Math.floor(Math.random() * 101), sd.format(new Date(), 'YYYY-MM-DD HH:mm:ss'));
-    // console.log(sd.format(new Date(), 'YYYY-MM-DD HH:mm:ss'))
-
-    // 更新 Redis 資料到 Mysql
+  async subscribe() { // 更新 Redis 資料到 Mysql
     const { ctx, app } = this;
     const redis = app.redis;
-    const transactionsIdTempList = "Transactions:Temp";
-    let tempListLen = await redis.llen(transactionsIdTempList);
+    const transactionsTemp = "Transactions:Temp";
+    let tempListLen = await redis.llen(transactionsTemp);
+    let transactionsList = [];
 
     if (tempListLen) {
-      console.log("Has data");
-      const idList = await redis.lpop(transactionsIdTempList, tempListLen);
-      // console.log(idList)
-      const transactionsList = await ctx.service.transaction.getList(idList);
-      // console.log(transactionsList)
+      const tempList = await redis.lpop(transactionsTemp, tempListLen);
+      for (let i in tempList){
+        transactionsList.push(JSON.parse(tempList[i]));
+      }
       await ctx.model.Transaction.bulkCreate(transactionsList);
     }
   }

@@ -1,30 +1,21 @@
 'use strict';
 
-const sd = require('silly-datetime');
-
 const Controller = require('egg').Controller;
-
-function toInt(str) {
-  if (typeof str === 'number') return str;
-  if (!str) return str;
-  return parseInt(str, 10) || 0;
-}
 
 class UserController extends Controller {
 
   async index() { // 使用者首頁
     const { ctx, app } = this;
     const username = ctx.session.username;
-    // const username = 'root';
     const redis = app.redis;
-    const userBalanceRedis = username + 'Balance';
+    const userBalanceRedis = username + ':Balance';
     let money;
 
-    // if (!username){
-    //   await ctx.render('home.njk', { userNotFound: "請登入" });
+    if (!username){
+      await ctx.render('home.njk', { userNotFound: "請登入" });
 
-    //   return;
-    // }
+      return;
+    }
     let userBalance = await redis.get(userBalanceRedis);
     if (userBalance){
       money = userBalance;
@@ -36,7 +27,6 @@ class UserController extends Controller {
       });
       money = userBalance.balance;
       await redis.set(userBalanceRedis, money);
-      // await redis.expire(userBalanceRedis, 3);
     }
 
     await ctx.render('user.njk', { username: username, money: money });
@@ -78,16 +68,14 @@ class UserController extends Controller {
     const { ctx } = this;
     const { request: { body } } = ctx;
 
-    // const user = await ctx.model.User.findOne({ where: { name: body.username } });
-
     let user = await this.ctx.service.cache.get(body.username);
     if(!user){
       user = await ctx.model.User.findOne({ where: { name: body.username } });
       await ctx.service.cache.set(body.username, user, 3600);
     }
-
     if(!user) {
       await ctx.render('home.njk', { userNotFound: "使用者不存在" });
+
       return;
     }
     const username = user.name;
@@ -104,7 +92,6 @@ class UserController extends Controller {
 
   async logout() {
     const { ctx } = this;
-
     ctx.session = null;
 
     ctx.redirect('/');

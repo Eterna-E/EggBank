@@ -11,7 +11,6 @@
 
 <body>
   <div class="system_name">
-      {# <h2>○○銀行</h2> #}
       <a href="/" class="btn btn-link" style="text-decoration:none;color:black"><h1>○○銀行</h1></a>
     </div>
     
@@ -24,13 +23,11 @@
           <a href="/trans" class="btn btn-success">交易紀錄</a>
           <br>
           <br>
-          {# <a href="/deposit" class="btn btn-outline-success">存款</a> #}
           <form method="post" action="/operate" id="deposit">
             <input type="hidden" name="operate" value="deposit" /> 
             <a class="btn btn-outline-success" onclick="document.getElementById('deposit').submit(); return false;">存款</a>
           </form>
           <br>
-          {# <a href="/record" class="btn btn-outline-primary">提款</a> #}
           <form method="post" action="/operate" id="withdraw">
             <input type="hidden" name="operate" value="withdraw" /> 
             <a class="btn btn-outline-primary" onclick="document.getElementById('withdraw').submit(); return false;">提款</a>

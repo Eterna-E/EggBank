@@ -1,19 +1,7 @@
-local id = redis.call('LINDEX', KEYS[1], 0)
+local id = KEYS[1]
+local userBalance = KEYS[2]
 local amount = ARGV[1]
-local balance = redis.call('HGET', 'Transactions:' .. id, 'balance')
-balance = balance + amount
-local newId = id + 1
-redis.call('LPUSH', KEYS[1], newId)
-local transactionKey = 'Transactions:' .. newId
-redis.call('HSET', transactionKey, 
-    'id', newId, 
-    'user', ARGV[2],
-    'deposit', ARGV[3],
-    'withdraw', ARGV[4],
-    'balance', balance,
-    'date', ARGV[5]
-)
-redis.call('expire', transactionKey, 3600)
-redis.call('RPUSH', 'Transactions:Temp', newId)
+local newId = redis.call('INCR', id)
+local balance = redis.call('INCRBY', userBalance, amount)
 
-return balance
+return { newId, balance }
