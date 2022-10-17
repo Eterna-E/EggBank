@@ -6,7 +6,7 @@ class HomeController extends Controller {
   async index() {
     const { ctx } = this;
 
-    if (ctx.session.username){
+    if (ctx.session.username) {
       ctx.redirect('/users');
 
       return;

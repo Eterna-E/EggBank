@@ -2,51 +2,59 @@
 
 const sd = require('silly-datetime');
 const fs = require('fs');
-const { toInt } = require('../utils/utils')
+const { toInt } = require('../utils/utils');
 
 const Service = require('egg').Service;
 
 class TransactionService extends Service {
-  async searchTransaction(username){
+  async searchTransaction(username) {
     const redis = this.app.redis;
     const userTransactions = username + ':Transactions';
     let transactionsList = await redis.lrange(userTransactions, 0, 99);
     let transactions = [];
 
-    if (! transactionsList.length) { // transactionList 不存在
+    if (!transactionsList.length) { // transactionList 不存在
       await this.dataSyncMysqlToRedis(username); // Mysql to Redis 資料同步
       transactionsList = await redis.lrange(userTransactions, 0, 99);
     }
-    for (let i in transactionsList){
-      await transactions.push(JSON.parse(transactionsList[i]))
+    for (let i in transactionsList) {
+      await transactions.push(JSON.parse(transactionsList[i]));
     }
 
     return transactions;
   }
 
-  async createTransactionNoLock(username){ //建立存提款交易-採用Lua腳本
+  async createTransactionNoLock(username) { //建立存提款交易-採用Lua腳本
     const redis = this.app.redis;
     const userTransactions = username + ':Transactions';
     const transactionList = await redis.llen(userTransactions);
 
-    if (! transactionList) { // transactionList 不存在
+    if (!transactionList) { // transactionList 不存在
       await this.dataSyncMysqlToRedis(username); // Mysql to Redis 資料同步
     }
-    const result = await this.insertTransactionByLua(username, userTransactions); //寫入 1 筆交易紀錄到 redis 
+    const balance = await this.insertTransactionByLua(username, userTransactions); //寫入 1 筆交易紀錄到 redis 
 
-    return result;
+    return balance;
   }
 
   async insertTransactionByLua(username, userTransactions) { //寫入 1 筆交易紀錄到 redis 
     const { ctx } = this;
-    const { request: { body } } = ctx;
+    const body = ctx.request.body;
     const redis = this.app.redis;
     const operate = body.operate;
     const newestId = "newest:TransactionId";
     const userBalance = username + ":Balance";
-
     let amount = toInt(body.amount);
-    if (operate === 'withdraw'){ amount = amount * -1; }
+
+    if (operate === 'withdraw') {
+      const amountCheckLuaScript = fs.readFileSync('app/service/amountCheck.lua');
+      redis.defineCommand("amountCheck", { numberOfKeys: 1, lua: amountCheckLuaScript });
+      const checkResult = await redis.amountCheck(userBalance, amount);
+      if (!checkResult) {
+        return checkResult;
+      }
+      amount = amount * -1; 
+    }
     const redisLuaScript = fs.readFileSync('app/service/transaction.lua');
     redis.defineCommand("createTransaction", { numberOfKeys: 2, lua: redisLuaScript });
     const result = await redis.createTransaction(newestId, userBalance, amount);
@@ -65,17 +73,23 @@ class TransactionService extends Service {
     return balance;
   }
 
-  async dataSyncMysqlToRedis(username){
+  async dataSyncMysqlToRedis(username) {
+    const { ctx } = this;
     const redis = this.app.redis;
     const expireTime = 3600;
-    const newestId = "newest:TransactionId";
     const userBalance = username + ":Balance";
     const userTransactions = username + ':Transactions';
+    const newest = await ctx.model.Transaction.findOne({ 
+      attributes: ['id'], 
+      order: [[ 'id', 'DESC' ]] 
+    });
+    const newestId = newest.id;
+    await redis.setex("newest:TransactionId", expireTime, newestId);
 
     const transactionList = await this.getAllTransactions(username, 100000); // 查詢 mysql 10萬筆交易資料
-    await redis.setex(newestId, expireTime, transactionList[0].id);
+    
     await redis.setex(userBalance, expireTime, transactionList[0].balance);
-    for (let i in transactionList){ // 同步資料到 redis
+    for (let i in transactionList) { // 同步資料到 redis
       await redis.rpush(userTransactions, JSON.stringify(transactionList[i]));
     }
 

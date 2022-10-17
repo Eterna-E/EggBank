@@ -2,7 +2,7 @@
 
 const Controller = require('egg').Controller;
 
-const { toInt } = require('../utils/utils')
+const { toInt } = require('../utils/utils');
 
 class TransactionController extends Controller {
   async index() { // 交易紀錄
@@ -14,21 +14,24 @@ class TransactionController extends Controller {
     await ctx.render('transaction.njk', { transactions: transactionsList, page: 1 });
   }
 
-  async show(){
+  async show() {
     const { ctx, app } = this;
     const username = ctx.session.username;
     const redis = app.redis;
     const userTransactions = username + ':Transactions';
     let transactions = [];
     let page = toInt(ctx.params.id);
-    if (!page) { page = 1; }
+    if (!page) { 
+      page = 1; 
+    }
     const offset =  (page - 1) * 100;
+    let transactionsLen = await redis.llen(userTransactions);
     let transactionsList = await redis.lrange(userTransactions, 0 + offset, 99 + offset);
-    if (! transactionsList.length) { // transactionList 不存在
-      await this.dataSyncMysqlToRedis(username); // Mysql to Redis 資料同步
+    if (!transactionsLen) { // transactionList 不存在
+      await ctx.service.transaction.dataSyncMysqlToRedis(username); // Mysql to Redis 資料同步
       transactionsList = await redis.lrange(userTransactions, 0 + offset, 99 + offset);
     }
-    for (let i in transactionsList){
+    for (let i in transactionsList) {
       await transactions.push(JSON.parse(transactionsList[i]));
     }
     
@@ -37,27 +40,42 @@ class TransactionController extends Controller {
 
   async create() {
     const { ctx } = this;
-    const username = ctx.session.username
+    const body = ctx.request.body;
+    const username = ctx.session.username;
+    const operate = body.operate;
+    const redis = this.app.redis;
+    const userBalance = username + ":Balance";
+    const money = toInt(await redis.get(userBalance));
 
-    await ctx.service.transaction.createTransactionNoLock(username);
+    const balance = await ctx.service.transaction.createTransactionNoLock(username);
+    if (!balance && balance !== 0) {
+      await ctx.render('money.njk', {
+        operateName: (operate === 'deposit') ? '存款' : "提款",
+        money: money,
+        operate: operate,
+        btnName: (operate === 'deposit') ? '存入' : "提領",
+        amountError: "提領金額不可大於可用餘額"
+      });
+
+      return;
+    }
 
     ctx.redirect('/users');
   }
 
   async operate() {
     const { ctx, app } = this;
-    const { request: { body } } = ctx;
+    const body = ctx.request.body;
     const username = ctx.session.username;
     const operate = body.operate;
     const redis = app.redis;
-    const userBalanceRedis = username + 'Balance';
+    const userBalanceRedis = username + ':Balance';
     let money;
 
     let userBalance = await redis.get(userBalanceRedis);
-    if (userBalance){
+    if (userBalance) {
       money = userBalance;
-    }
-    else{
+    } else {
       userBalance = await ctx.model.Transaction.findOne({ 
         where: { user: username },
         order: [[ 'id', 'DESC' ]],

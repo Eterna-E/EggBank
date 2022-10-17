@@ -21,7 +21,7 @@ class UpdateData extends Subscription {
 
     if (tempListLen) {
       const tempList = await redis.lpop(transactionsTemp, tempListLen);
-      for (let i in tempList){
+      for (let i in tempList) {
         transactionsList.push(JSON.parse(tempList[i]));
       }
       await ctx.model.Transaction.bulkCreate(transactionsList);

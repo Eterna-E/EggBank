@@ -11,40 +11,39 @@ class UserController extends Controller {
     const userBalanceRedis = username + ':Balance';
     let money;
 
-    if (!username){
+    if (!username) {
       await ctx.render('home.njk', { userNotFound: "請登入" });
 
       return;
     }
     let userBalance = await redis.get(userBalanceRedis);
-    if (userBalance){
+    if (userBalance) {
       money = userBalance;
-    }
-    else{
+    } else {
       userBalance = await ctx.model.Transaction.findOne({ 
         where: { user: username },
         order: [[ 'id', 'DESC' ]],
       });
       money = userBalance.balance;
-      await redis.set(userBalanceRedis, money);
+      await redis.setnx(userBalanceRedis, money);
     }
 
     await ctx.render('user.njk', { username: username, money: money });
   }
 
   async create() { // 註冊
-    const { ctx, app } = this;
-    const { request: { body } } = ctx;
+    const { ctx } = this;
+    const body = ctx.request.body;
     const username = body.username;
     const password = body.password;
 
     let user = await this.ctx.service.cache.get(username);
-    if(!user){
+    if (!user) {
       user = await ctx.model.User.findOne({ where: { name: username } });
       await ctx.service.cache.set(username, user, 3600);
     }
 
-    if(!user){
+    if (!user) {
       await ctx.model.User.create({ 
         name: username,
         password: password,
@@ -58,22 +57,21 @@ class UserController extends Controller {
       ctx.session.username = username;
   
       ctx.redirect('/users');
-    }
-    else{
+    } else {
       await ctx.render('home.njk', { userExist: "帳號已存在，請重新輸入" });
     }
   }
 
   async login() { // 登入
     const { ctx } = this;
-    const { request: { body } } = ctx;
+    const body = ctx.request.body;
 
     let user = await this.ctx.service.cache.get(body.username);
-    if(!user){
+    if (!user) {
       user = await ctx.model.User.findOne({ where: { name: body.username } });
       await ctx.service.cache.set(body.username, user, 3600);
     }
-    if(!user) {
+    if (!user) {
       await ctx.render('home.njk', { userNotFound: "使用者不存在" });
 
       return;
@@ -81,11 +79,10 @@ class UserController extends Controller {
     const username = user.name;
     const password = user.password;
 
-    if(username === body.username && password === body.password){
+    if (username === body.username && password === body.password) {
       ctx.session.username = username;
       ctx.redirect('/users');
-    }
-    else{
+    } else {
       await ctx.render('home.njk', { passWordIncorrect: "密碼錯誤" });
     }
   }
