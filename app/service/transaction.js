@@ -24,37 +24,49 @@ class TransactionService extends Service {
     return transactions;
   }
 
-  async createTransactionNoLock(username) { //建立存提款交易-採用Lua腳本
+  async createTransaction(username) { //建立存提款交易
     const redis = this.app.redis;
     const userTransactions = username + ':Transactions';
     const transactionList = await redis.llen(userTransactions);
 
     if (!transactionList) { // transactionList 不存在
-      await this.dataSyncMysqlToRedis(username); // Mysql to Redis 資料同步
+      await this.syncDataMysqlToRedis(username); // Mysql to Redis 資料同步
     }
-    const balance = await this.insertTransactionByLua(username); //寫入 1 筆交易紀錄到 redis 
+    const result = await this.checkAndChangeBalance(username); // 檢查存提金額，修改結餘
+    const balance = await this.insertTransaction(username, result); //寫入 1 筆交易紀錄到 redis 
 
     return balance;
   }
 
-  async insertTransactionByLua(username) { //寫入 1 筆交易紀錄到 redis 
+  async checkAndChangeBalance(username) { // 檢查存提金額，修改結餘 - 採用Lua腳本
     const { ctx } = this;
     const body = ctx.request.body;
     const redis = this.app.redis;
     const operate = body.operate;
     const newestId = "newest:TransactionId";
     const userBalance = username + ":Balance";
-    const userTransactions = username + ':Transactions';
     let amount = toInt(body.amount);
     const redisLuaScript = fs.readFileSync('app/service/transaction.lua');
-    redis.defineCommand("createTransaction", { numberOfKeys: 2, lua: redisLuaScript });
-    const result = await redis.createTransaction(newestId, userBalance, amount, operate);
+    redis.defineCommand("checkAndChangeBalance", { numberOfKeys: 2, lua: redisLuaScript });
+    const result = await redis.checkAndChangeBalance(newestId, userBalance, amount, operate);
     if (!result) {
-      return false;
+      throw new Error('提領金額不可大於可用餘額');
     }
+
+    return result;
+  }
+
+  async insertTransaction(username, result) { //寫入 1 筆交易紀錄到 redis 
+    const { ctx } = this;
+    const body = ctx.request.body;
+    const redis = this.app.redis;
+    const operate = body.operate;
+    const userTransactions = username + ':Transactions';
+    let amount = toInt(body.amount);
+    const id = result[0];
     const balance = result[1];
     const data = JSON.stringify({
-      id: result[0],
+      id: id,
       user: username,
       deposit: (operate === 'deposit') ? amount : 0,
       withdraw: (operate === 'withdraw') ? amount : 0,
@@ -67,7 +79,7 @@ class TransactionService extends Service {
     return balance;
   }
 
-  async dataSyncMysqlToRedis(username) {
+  async syncDataMysqlToRedis(username) {
     const { ctx } = this;
     const redis = this.app.redis;
     const expireTime = 3600;
