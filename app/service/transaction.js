@@ -32,32 +32,26 @@ class TransactionService extends Service {
     if (!transactionList) { // transactionList 不存在
       await this.dataSyncMysqlToRedis(username); // Mysql to Redis 資料同步
     }
-    const balance = await this.insertTransactionByLua(username, userTransactions); //寫入 1 筆交易紀錄到 redis 
+    const balance = await this.insertTransactionByLua(username); //寫入 1 筆交易紀錄到 redis 
 
     return balance;
   }
 
-  async insertTransactionByLua(username, userTransactions) { //寫入 1 筆交易紀錄到 redis 
+  async insertTransactionByLua(username) { //寫入 1 筆交易紀錄到 redis 
     const { ctx } = this;
     const body = ctx.request.body;
     const redis = this.app.redis;
     const operate = body.operate;
     const newestId = "newest:TransactionId";
     const userBalance = username + ":Balance";
+    const userTransactions = username + ':Transactions';
     let amount = toInt(body.amount);
-
-    if (operate === 'withdraw') {
-      const amountCheckLuaScript = fs.readFileSync('app/service/amountCheck.lua');
-      redis.defineCommand("amountCheck", { numberOfKeys: 1, lua: amountCheckLuaScript });
-      const checkResult = await redis.amountCheck(userBalance, amount);
-      if (!checkResult) {
-        return checkResult;
-      }
-      amount = amount * -1; 
-    }
     const redisLuaScript = fs.readFileSync('app/service/transaction.lua');
     redis.defineCommand("createTransaction", { numberOfKeys: 2, lua: redisLuaScript });
-    const result = await redis.createTransaction(newestId, userBalance, amount);
+    const result = await redis.createTransaction(newestId, userBalance, amount, operate);
+    if (!result) {
+      return false;
+    }
     const balance = result[1];
     const data = JSON.stringify({
       id: result[0],
@@ -69,7 +63,7 @@ class TransactionService extends Service {
     });
     await redis.lpush(userTransactions, data);
     await redis.rpush("Transactions:Temp", data);
-    
+
     return balance;
   }
 
