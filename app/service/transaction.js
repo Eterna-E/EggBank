@@ -14,7 +14,7 @@ class TransactionService extends Service {
     let transactions = [];
 
     if (!transactionsList.length) { // transactionList 不存在
-      await this.dataSyncMysqlToRedis(username); // Mysql to Redis 資料同步
+      await this.syncDataMysqlToRedis(username); // Mysql to Redis 資料同步
       transactionsList = await redis.lrange(userTransactions, 0, 99);
     }
     for (let i in transactionsList) {
