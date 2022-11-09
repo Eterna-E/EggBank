@@ -23,7 +23,7 @@ module.exports = appInfo => {
       port: 3306,
       database: 'EggBank',
       username: 'root', // 数据库用户名
-      password: '12345678', // 数据库密码
+      password: '123456', // 数据库密码
       timezone: '+08:00', // 设置时区
 
       dialectOptions: {

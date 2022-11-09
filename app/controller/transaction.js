@@ -28,7 +28,7 @@ class TransactionController extends Controller {
     let transactionsLen = await redis.llen(userTransactions);
     let transactionsList = await redis.lrange(userTransactions, 0 + offset, 99 + offset);
     if (!transactionsLen) { // transactionList 不存在
-      await ctx.service.transaction.dataSyncMysqlToRedis(username); // Mysql to Redis 資料同步
+      await ctx.service.transaction.syncDataMysqlToRedis(username); // Mysql to Redis 資料同步
       transactionsList = await redis.lrange(userTransactions, 0 + offset, 99 + offset);
     }
     for (let i in transactionsList) {
@@ -47,14 +47,15 @@ class TransactionController extends Controller {
     const userBalance = username + ":Balance";
     const money = toInt(await redis.get(userBalance));
 
-    const balance = await ctx.service.transaction.createTransactionNoLock(username);
-    if (!balance && balance !== 0) {
+    try {
+      await ctx.service.transaction.createTransaction(username);
+    } catch (amountError) {
       await ctx.render('money.njk', {
         operateName: (operate === 'deposit') ? '存款' : "提款",
         money: money,
         operate: operate,
         btnName: (operate === 'deposit') ? '存入' : "提領",
-        amountError: "提領金額不可大於可用餘額"
+        amountError: amountError
       });
 
       return;
